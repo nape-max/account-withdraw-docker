@@ -4,47 +4,65 @@ namespace Route;
 
 use Controller\AccountController;
 
-class RouteService {
-   private $route;
+class RouteService
+{
+    private static function controllers()
+    {
+        return [
+            '' => [
+                '' => [
+                    '' => [
+                        'GET' => function () {
+                            return AccountController::indexAction();
+                        }
+                    ]
+                ],
+                'account' => [
+                    'authorize' => [
+                        '' => [
+                            'GET' => function () {
+                                return AccountController::authorizeAction();
+                            },
+                            'POST' => function () {
+                                return AccountController::authorizeActionPost();
+                            }
+                        ]
+                    ]
+                ]
+            ],
+        ];
+    }
 
-   private function controllers()
-   {
-      return [
-         '' => [
-            '' => function() { return AccountController::indexAction(); },
-            'account' => [
-               '' => function() { return AccountController::indexAction(); }
-            ]
-         ],
-      ];
-   }
+    public static function start(array $route, string $method)
+    {
+        $currentNode = self::controllers();
 
-   public function callAction(array $route)
-   {
-      $action = $this->getAction($route);
+        foreach ($route as $routeKey) {
+            if (isset($currentNode[$routeKey])) {
+                $currentNode = $currentNode[$routeKey];
+            } else {
+                self::ErrorPage404();
+            }
+        }
 
-      if ($action !== false) {
-         $result = $action();
-      } else {
-         $result = "Page not found.";
-      }
+        if (!isset($currentNode[$method])) {
+            self::ErrorPage405();
+        } else {
+            $currentNode = $currentNode[$method];
 
-      return $result;
-   }
+            $currentNode();
+        }
+    }
 
-   public function getAction(array $route)
-   {
-      $currentNode = $this->controllers();
+    private static function ErrorPage404()
+    {
+        http_response_code(404);
+        exit;
+    }
 
-      foreach ($route as $routeKey) {
-         if (isset($currentNode[$routeKey])) {
-            $currentNode = $currentNode[$routeKey];
-         } else {
-            $currentNode = false;
-            break;
-         }
-      }
-
-      return $currentNode;
-   }
+    private static function ErrorPage405()
+    {
+        http_response_code(405);
+        exit;
+    }
 }

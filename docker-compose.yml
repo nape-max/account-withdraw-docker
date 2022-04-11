@@ -16,19 +16,19 @@ services:
         expose:
             - "9000"
         links:
-            - mysql
+            - db
         volumes:
             - ./www:/var/www
-    mysql:
+    db:
         image: mysql
         ports:
             - "3306:3306"
         volumes:
-         - /etc/mysql:/etc/mysql
-         - ./logs/mysql:/var/log/mysql
-         - ./mysql:/var/lib/mysql
-         - ./mysql-files:/var/lib/mysql-files
-         - ./data:/docker-entrypoint-initdb.d
+            - /etc/mysql:/etc/mysql
+            - ./logs/mysql:/var/log/mysql
+            - ./mysql:/var/lib/mysql
+            - ./mysql-files:/var/lib/mysql-files
+            - ./data:/docker-entrypoint-initdb.d
         environment:
             MYSQL_ROOT_PASSWORD: password
-            MYSQL_DATABASE: sait
+            MYSQL_DATABASE: finance-app
