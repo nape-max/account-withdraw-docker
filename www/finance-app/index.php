@@ -1,4 +1,6 @@
 <?php
+session_write_close();
+
 require_once("./autoload.php");
 
 use Route\RouteService;
