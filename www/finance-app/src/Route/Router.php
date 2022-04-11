@@ -66,6 +66,20 @@ class Router
                                 return AccountController::authorizeActionPost();
                             }
                         ]
+                    ],
+                    'logout' => [
+                        '' => [
+                            'GET' => function () {
+                                return AccountController::logoutAction();
+                            }
+                        ]
+                    ],
+                    'withdraw' => [
+                        '' => [
+                            'POST' => function () {
+                                return AccountController::withdrawFromBalanceAction();
+                            }
+                        ]
                     ]
                 ]
             ],

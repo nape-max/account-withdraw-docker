@@ -15,7 +15,7 @@ class AccountModel
         $this->connection = $connection;
     }
 
-    public function getUserByUsername($username): Account
+    public function getUserByUsername($username): ?Account
     {
         $statement = $this
             ->connection
@@ -68,6 +68,46 @@ class AccountModel
 
         $statement->bindValue(':accessToken', $accessToken);
         $statement->bindValue(':username', $username);
+        $statement->execute();
+
+        return true;
+    }
+
+    public function authorizeUser(Account $user)
+    {
+        $isVerified = $this->verifyUser($user);
+
+        if ($isVerified) {
+            $accessToken = bin2hex($user->username . random_bytes(36));
+
+            if ($this->setAccessTokenByUsername($user->username, $accessToken)) {
+                return $accessToken;
+            }
+        }
+
+        return false;
+    }
+
+    public function verifyUser(Account $user)
+    {
+        if (true === password_verify($_POST['password'], $user->password)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function withdrawFromBalanceByAccessToken($balance, $accessToken)
+    {
+        $statement = $this
+            ->connection
+            ->getConnection()
+            ->prepare("
+                UPDATE account SET balance = :balance WHERE access_token = :accessToken;
+            ");
+
+        $statement->bindValue(':balance', $balance);
+        $statement->bindValue(':accessToken', $accessToken);
         $statement->execute();
 
         return true;

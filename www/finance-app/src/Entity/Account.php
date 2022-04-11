@@ -8,4 +8,5 @@ class Account
     public $username;
     public $password;
     public $balance;
+    public $accessToken;
 }

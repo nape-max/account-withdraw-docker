@@ -17,9 +17,28 @@ class AccountController
 
     public static function authorizeAction()
     {
+        if (isset($_COOKIE['access_token'])) {
+            header("Location: http://finance-app/account");
+            exit;
+        }
+
         $view = new View();
 
         $view->generate('Account', 'Authorize/AuthorizeView');
+    }
+
+    public static function logoutAction()
+    {
+        if (isset($_COOKIE['access_token'])) {
+            $accountModel = new AccountModel(new MysqlConnection());
+            $user = $accountModel->getUserByAccessToken($_COOKIE['access_token']);
+
+            if ($accountModel->setAccessTokenByUsername($user->username, null)) {
+                setcookie('access_token', false);
+            }
+        }
+
+        header("Location: http://finance-app/account/authorize");
     }
 
     public static function authorizeActionPost()
@@ -28,26 +47,20 @@ class AccountController
 
         $user = $accountModel->getUserByUsername($_POST['username']);
 
-        if (true === password_verify($_POST['password'], $user->password)) {
-            $accessToken = bin2hex($user->username . random_bytes(36));
+        $accessToken = $accountModel->authorizeUser($user);
 
-            if ($accountModel->setAccessTokenByUsername($user->username, $accessToken)) {
-                header("Location: http://finance-app/account");
-                setcookie('access_token', $accessToken);
-            }
+        if ($accessToken !== false) {
+            header("Location: http://finance-app/account");
+            setcookie('access_token', $accessToken);
         }
     }
 
     public static function getProfile()
     {
+        self::checkIsAuthorized();
+
         $accountModel = new AccountModel(new MysqlConnection());
         $view = new View();
-
-        if (!$accountModel->isAuthorized()) {
-            $view->generate('Account', 'NotAuthorized');
-
-            exit;
-        }
 
         $user = $accountModel->getUserByAccessToken($_COOKIE['access_token']);
 
@@ -56,5 +69,39 @@ class AccountController
 
     public static function withdrawFromBalanceAction()
     {
+        self::checkIsAuthorized();
+
+        $accountModel = new AccountModel(new MysqlConnection());
+
+        $userByAccessToken = $accountModel->getUserByAccessToken($_COOKIE['access_token']);
+        $userByUsername = $accountModel->getUserByUsername($_POST['username']);
+
+        if (null !== $userByUsername) {
+            $isVerified = $accountModel->verifyUser($userByUsername);
+
+            if ($isVerified !== false && $userByUsername->accessToken === $userByAccessToken->accessToken) {
+                $isWithdrawed = $accountModel->withdrawFromBalanceByAccessToken($userByAccessToken->balance - $_POST['amount'], $userByAccessToken->accessToken);
+
+                if ($isWithdrawed) {
+                    header("Location: http://finance-app/account");
+                    exit;
+                }
+            }
+        }
+
+        echo "NO!";
+    }
+
+    public static function checkIsAuthorized()
+    {
+        $accountModel = new AccountModel(new MysqlConnection());
+        $view = new View();
+
+        if (!$accountModel->isAuthorized()) {
+            setcookie('access_token', false);
+            $view->generate('Account', 'NotAuthorized');
+
+            exit;
+        }
     }
 };

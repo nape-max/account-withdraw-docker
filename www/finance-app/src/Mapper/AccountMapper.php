@@ -18,6 +18,7 @@ class AccountMapper
         $account->username = $databaseResult['username'];
         $account->password = $databaseResult['password'];
         $account->balance = $databaseResult['balance'];
+        $account->accessToken = $databaseResult['access_token'];
 
         return $account;
     }
