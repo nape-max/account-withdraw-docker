@@ -3,6 +3,7 @@
 namespace DatabaseConnection;
 
 use PDO;
+use PDOException;
 
 class MysqlConnection
 {

@@ -88,6 +88,17 @@ class AccountModel
         return false;
     }
 
+    public function isAllowWithdraw(Account $userByUsername, Account $userByAccessToken)
+    {
+        $isVerified = $this->verifyUser($userByUsername);
+
+        if ($isVerified !== false && $userByUsername->accessToken === $userByAccessToken->accessToken) {
+            return true;
+        }
+
+        return false;
+    }
+
     public function verifyUser(Account $user)
     {
         if (true === password_verify($_POST['password'], $user->password)) {
@@ -97,8 +108,37 @@ class AccountModel
         return false;
     }
 
-    public function withdrawFromBalanceByAccessToken($balance, $accessToken)
+    public function withdrawFromBalanceByAccessToken($accessToken, $withdrawAmount)
     {
+        $this
+            ->connection
+            ->getConnection()
+            ->query("START TRANSACTION; SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;")
+            ->execute();
+
+        $balanceStatement = $this
+            ->connection
+            ->getConnection()
+            ->prepare("
+                SELECT balance FROM account WHERE access_token = :accessToken;
+            ");
+
+        $balanceStatement->bindValue(':accessToken', $accessToken);
+        $balanceStatement->execute();
+        $balance = $balanceStatement->fetchColumn();
+
+        $newBalance = $balance - $withdrawAmount;
+
+        if ($newBalance < 0) {
+            $this
+                ->connection
+                ->getConnection()
+                ->query("ROLLBACK;")
+                ->execute();
+
+            return false;
+        }
+
         $statement = $this
             ->connection
             ->getConnection()
@@ -106,9 +146,15 @@ class AccountModel
                 UPDATE account SET balance = :balance WHERE access_token = :accessToken;
             ");
 
-        $statement->bindValue(':balance', $balance);
+        $statement->bindValue(':balance', $newBalance);
         $statement->bindValue(':accessToken', $accessToken);
         $statement->execute();
+
+        $this
+            ->connection
+            ->getConnection()
+            ->query("COMMIT;")
+            ->execute();
 
         return true;
     }
